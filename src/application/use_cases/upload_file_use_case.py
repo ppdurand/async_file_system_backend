@@ -4,7 +4,7 @@ class UploadFileUseCase:
     def __init__(self, file_repository):
         self.file_repository = file_repository
 
-    def execute(self, parameters: UploadFile):
+    async def execute(self, parameters: UploadFile):
         try:
             record = self.file_repository.upload_file(
                 filename=parameters.filename,

@@ -15,7 +15,6 @@ class FileResponse(BaseModel):
     filepath: str
     file_size: int
     file_hash: str = None
-    mime_type: str = None
     status: str
     created_at: datetime
     

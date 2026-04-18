@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from src.infra.database import get_db
 from fastapi import APIRouter, UploadFile, Depends
 from src.infra.repository.file_repository import FileRepository
-from src.application.use_cases import UploadFileUseCase, ListFilesUseCase
+from src.application.use_cases import UploadFileUseCase, ListFilesUseCase, GetFileUseCase
 from src.application.dto.file import UploadFile as UploadFileParameter
 
 router = APIRouter()
@@ -15,7 +15,7 @@ async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
     use_case = UploadFileUseCase(file_repository)
     parameters = UploadFileParameter(filename=file.filename, content=content)
     
-    response = use_case.execute(parameters)
+    response = await use_case.execute(parameters)
     
     if response['success'] == False:
         return {"success": False, "message": response['message']}
@@ -30,3 +30,13 @@ async def list_files(db: Session = Depends(get_db)):
     
     response = await use_case.execute()
     return {"success": True, "data": response}
+
+@router.get("/files/{file_id}")
+async def get_file(file_id: str, db: Session = Depends(get_db)):
+    repo = FileRepository(db)
+    
+    use_case = GetFileUseCase(repo)
+    
+    response = await use_case.execute(file_id)
+    
+    return response

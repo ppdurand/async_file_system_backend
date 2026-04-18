@@ -52,3 +52,25 @@ class FileRepository:
             ), query))
         except Exception as e:
             raise e
+    
+    async def get_file(self, file_id) -> FileResponse:
+        try:
+            query = self.db.query(
+                File
+            ).filter(File.id == file_id).first()
+
+            if query is None:
+                return None
+
+            return FileResponse(
+                id=query.id,
+                filename=query.filename,
+                filepath=query.filepath,
+                file_size=query.file_size,
+                file_hash=query.file_hash,
+                status=query.status,
+                created_at=query.created_at
+            )
+        except Exception as e:
+            print("ERRO ->", e)
+            raise e
