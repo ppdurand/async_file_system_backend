@@ -24,6 +24,15 @@ class FileResponse(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat() 
         }
+        
+class FileBasicInfo(BaseModel):
+    id: str
+    filename: str
+    file_size: int
+    status: str
+    
+    class Config:
+        from_attributes = True
 
 class FileDownload(BaseModel):
     content: bytes

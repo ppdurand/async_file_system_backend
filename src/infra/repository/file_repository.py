@@ -2,13 +2,14 @@ import os
 import uuid
 import hashlib
 from src.infra.models.file import File
+from src.application.dto.file import FileResponse, FileBasicInfo
 
 class FileRepository:
     def __init__(self, db):
         self.db = db
         self.upload_dir = "uploads"
 
-    def upload_file(self, filename, content) -> File:
+    def upload_file(self, filename, content) -> FileResponse:
         try:
             unique_name = f"{uuid.uuid4()}_{filename}"
             file_path = os.path.join(self.upload_dir, unique_name)
@@ -36,3 +37,18 @@ class FileRepository:
             raise e
 
         return file_record
+    
+    async def list_files(self) -> list[FileBasicInfo]:
+        try:
+            query = self.db.query(
+                File.id, File.filename, File.file_size, File.status
+            ).all()
+            
+            return list(map(lambda x: FileBasicInfo(
+                id=x.id,
+                filename=x.filename,
+                file_size=x.file_size,
+                status=x.status
+            ), query))
+        except Exception as e:
+            raise e
