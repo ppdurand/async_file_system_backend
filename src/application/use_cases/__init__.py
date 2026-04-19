@@ -1,3 +1,5 @@
 from .list_file_use_case import ListFilesUseCase
 from .upload_file_use_case import UploadFileUseCase
 from .get_file_use_case import GetFileUseCase
+from .update_file_use_case import UpdateFileUseCase
+from .delete_file_use_case import DeleteFileUseCase

@@ -41,3 +41,10 @@ class FileDownload(BaseModel):
     
     class Config:
         arbitrary_types_allowed = True
+        
+class UpdateFile(BaseModel):
+    id: str
+    filename: str
+    
+    class Config:
+        from_attributes = True
