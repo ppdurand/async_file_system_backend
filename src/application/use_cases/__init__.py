@@ -3,3 +3,4 @@ from .upload_file_use_case import UploadFileUseCase
 from .get_file_use_case import GetFileUseCase
 from .update_file_use_case import UpdateFileUseCase
 from .delete_file_use_case import DeleteFileUseCase
+from .download_file_use_case import DownloadFileUseCase

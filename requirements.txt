@@ -2,8 +2,10 @@ fastapi
 uvicorn
 sqlalchemy
 psycopg2-binary
+asyncpg 
 pydantic
 alembic
 python-dotenv
 python-multipart
 pytest
+minio

@@ -1,8 +1,9 @@
 from sqlalchemy.orm import Session
 from src.infra.database import get_db
-from fastapi import APIRouter, UploadFile, Depends, Body
+from fastapi.responses import Response
+from fastapi import APIRouter, UploadFile, Depends, Body, HTTPException
 from src.infra.repository.file_repository import FileRepository
-from src.application.use_cases import UploadFileUseCase, ListFilesUseCase, GetFileUseCase, UpdateFileUseCase, DeleteFileUseCase
+from src.application.use_cases import UploadFileUseCase, ListFilesUseCase, GetFileUseCase, UpdateFileUseCase, DeleteFileUseCase, DownloadFileUseCase
 from src.application.dto.file import UploadFile as UploadFileParameter, UpdateFile as UpdateFileParameter
 
 router = APIRouter()
@@ -60,8 +61,24 @@ async def delete_file(file_id: str, db: Session = Depends(get_db)):
     
     use_case = DeleteFileUseCase(repo)
     response = await use_case.execute(file_id)
-    
+    print("response ->", response)
     if response is not True:
         return {"success": False, "error": response}
     
     return {"success": True, "message": "Arquivo apagado com sucesso!"}
+
+@router.get("/files/{file_id}/download")
+async def download_file(file_id: str, db: Session = Depends(get_db)):
+    repo = FileRepository(db)
+    
+    use_case = DownloadFileUseCase(repo)
+    result = await use_case.execute(file_id)
+    
+    if result is None:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+    
+    return Response(
+        content=result["content"],
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f"attachment; filename={result['filename']}"}
+    )

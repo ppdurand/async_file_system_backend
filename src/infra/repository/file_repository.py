@@ -1,8 +1,10 @@
 import os
+import io
 import uuid
 import hashlib
-from src.infra.models.file import File
+from src.domain.models import File
 from src.application.dto.file import FileResponse, FileBasicInfo
+from src.infra.minio_client import minio_client
 
 class FileRepository:
     def __init__(self, db):
@@ -12,19 +14,21 @@ class FileRepository:
     def upload_file(self, filename, content) -> FileResponse:
         try:
             id = str(uuid.uuid4())
-            unique_name = f"{filename}_{id}"
-            file_path = os.path.join(self.upload_dir, unique_name)
-
-            os.makedirs(self.upload_dir, exist_ok=True)
-            with open(file_path, "wb") as f:
-                f.write(content)
+            unique_name = f"{id}_{filename}"
+                
+            minio_client.put_object(
+                bucket_name='arquivos', 
+                object_name=unique_name, 
+                data=io.BytesIO(content), 
+                length=len(content)
+            )
 
             file_hash = hashlib.sha256(content).hexdigest()
 
             file_record = File(
                 id=id,
                 filename=filename,
-                filepath=file_path,
+                filepath=unique_name,
                 file_size=len(content),
                 file_hash=file_hash,
                 status="uploaded"
@@ -76,27 +80,38 @@ class FileRepository:
             print("ERRO ->", e)
             raise e
         
-    async def update_file(self, file_id, filename) -> FileBasicInfo:
+    async def update_file(self, file_id, filename) -> FileResponse:
         try:
             query = self.db.query(File).filter(File.id == file_id).first()
             if not query:
                 raise Exception("File not found")
-            
-            old_path = os.path.join("uploads", f"{query.filename}_{query.id}")
-            new_path = os.path.join("uploads", f"{filename}_{query.id}")
-            
-            print(old_path, new_path)
-            
-            if not os.path.exists(old_path):
-                raise Exception("File not found in filesystem")
-            
-            os.rename(old_path, new_path)
+
+            result = minio_client.get_object(
+                bucket_name='arquivos',
+                object_name=query.filepath
+            )
+            content = result.read()
+            result.close()
+            result.release_conn()
+
+            new_filepath = f"{query.id}_{filename}"
+            minio_client.put_object(
+                bucket_name='arquivos',
+                object_name=new_filepath,
+                data=io.BytesIO(content),
+                length=len(content)
+            )
+
+            minio_client.remove_object(
+                bucket_name='arquivos',
+                object_name=query.filepath
+            )
             
             query.filename = filename
-            query.filepath = new_path
+            query.filepath = new_filepath
             self.db.commit()
             self.db.refresh(query)
-        
+
             return FileResponse(
                 id=query.id,
                 filename=query.filename,
@@ -106,7 +121,6 @@ class FileRepository:
                 status=query.status,
                 created_at=query.created_at
             )
-            
         except Exception as e:
             self.db.rollback()
             raise e
@@ -120,16 +134,33 @@ class FileRepository:
             if not query:
                 raise Exception("File not found")
             
-            print("CWD:", os.getcwd())
-            print("PATH:", query.filepath)
-            print("ABS:", os.path.abspath(query.filepath))
-            print("EXISTS:", os.path.exists(query.filepath))
-            os.remove(query.filepath)
+            minio_client.remove_object(
+                bucket_name='arquivos', 
+                object_name=query.filepath
+            )
                 
             self.db.delete(query)
             self.db.commit()
-            self.db.refresh(query)
             
+            return True
         except Exception as e:
             self.db.rollback()
+            raise e
+        
+    async def download_file(self, file_id: str):
+        try:
+            query = self.db.query(File).filter(File.id == file_id).first()
+            if query is None:
+                return None
+
+            result = minio_client.get_object(
+                bucket_name='arquivos',
+                object_name=query.filepath
+            )
+            content = result.read()
+            result.close()
+            result.release_conn()
+
+            return {"filename": query.filename, "content": content}
+        except Exception as e:
             raise e
