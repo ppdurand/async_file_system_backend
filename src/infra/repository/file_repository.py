@@ -4,11 +4,12 @@ import uuid
 import hashlib
 from src.domain.models import File
 from src.application.dto.file import FileResponse, FileBasicInfo
-from src.infra.minio_client import minio_client
+from infra.clients.minio.minio_storage import MinioStorage
 
 class FileRepository:
-    def __init__(self, db):
+    def __init__(self, db, minio_storage: MinioStorage):
         self.db = db
+        self.storage = minio_storage
         self.upload_dir = "uploads"
 
     def upload_file(self, filename, content) -> FileResponse:
@@ -16,7 +17,7 @@ class FileRepository:
             id = str(uuid.uuid4())
             unique_name = f"{id}_{filename}"
                 
-            minio_client.put_object(
+            self.storage.upload(
                 bucket_name='arquivos', 
                 object_name=unique_name, 
                 data=io.BytesIO(content), 
@@ -86,7 +87,7 @@ class FileRepository:
             if not query:
                 raise Exception("File not found")
 
-            result = minio_client.get_object(
+            result = self.storage.get(
                 bucket_name='arquivos',
                 object_name=query.filepath
             )
@@ -95,14 +96,14 @@ class FileRepository:
             result.release_conn()
 
             new_filepath = f"{query.id}_{filename}"
-            minio_client.put_object(
+            self.storage.upload(
                 bucket_name='arquivos',
                 object_name=new_filepath,
                 data=io.BytesIO(content),
                 length=len(content)
             )
 
-            minio_client.remove_object(
+            self.storage.delete(
                 bucket_name='arquivos',
                 object_name=query.filepath
             )
@@ -134,7 +135,7 @@ class FileRepository:
             if not query:
                 raise Exception("File not found")
             
-            minio_client.remove_object(
+            self.storage.delete(
                 bucket_name='arquivos', 
                 object_name=query.filepath
             )
@@ -153,7 +154,7 @@ class FileRepository:
             if query is None:
                 return None
 
-            result = minio_client.get_object(
+            result = self.storage.get(
                 bucket_name='arquivos',
                 object_name=query.filepath
             )
