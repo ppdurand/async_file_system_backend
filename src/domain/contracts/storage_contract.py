@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class StoragePort(ABC):
+class StorageContract(ABC):
 
     @abstractmethod
     def upload(self, bucket_name, object_name, data, length) -> None:

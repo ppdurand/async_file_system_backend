@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from src.infra.database import Base, engine
 from src.domain.models import File 
 from src.presentation.routes.file_routes import router as file_router
-from infra.clients.minio.minio_client import minio_client
+from src.infra.clients.minio.minio_client import minio_client
 
 app = FastAPI()
 

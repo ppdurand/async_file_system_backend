@@ -4,10 +4,10 @@ import uuid
 import hashlib
 from src.domain.models import File
 from src.application.dto.file import FileResponse, FileBasicInfo
-from infra.clients.minio.minio_storage import MinioStorage
+from src.domain.contracts import StorageContract
 
 class FileRepository:
-    def __init__(self, db, minio_storage: MinioStorage):
+    def __init__(self, db, minio_storage: StorageContract):
         self.db = db
         self.storage = minio_storage
         self.upload_dir = "uploads"
@@ -67,6 +67,8 @@ class FileRepository:
 
             if query is None:
                 return None
+            
+            print("query get ->", query)
 
             return FileResponse(
                 id=query.id,
@@ -86,14 +88,18 @@ class FileRepository:
             query = self.db.query(File).filter(File.id == file_id).first()
             if not query:
                 raise Exception("File not found")
+            
+            print("query ->", query.filepath)
 
-            result = self.storage.get(
+            mino_obj = self.storage.get(
                 bucket_name='arquivos',
                 object_name=query.filepath
             )
-            content = result.read()
-            result.close()
-            result.release_conn()
+            
+            print("mino_obj ->", mino_obj)
+            content = mino_obj.read()
+            mino_obj.close()
+            mino_obj.release_conn()
 
             new_filepath = f"{query.id}_{filename}"
             self.storage.upload(

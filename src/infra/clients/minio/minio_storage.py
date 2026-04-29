@@ -1,6 +1,7 @@
 from minio import Minio
+from src.domain.contracts import StorageContract
 
-class MinioStorage:
+class MinioStorage(StorageContract):
     def __init__(self, client: Minio):
         self.client = client
     
@@ -11,6 +12,6 @@ class MinioStorage:
         self.client.remove_object(bucket_name, object_name)
     
     def get(self, bucket_name: str, object_name: str):
-        self.client.get_object(bucket_name, object_name)
+        return self.client.get_object(bucket_name, object_name)
     
     

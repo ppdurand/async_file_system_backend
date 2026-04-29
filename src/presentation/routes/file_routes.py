@@ -5,6 +5,7 @@ from fastapi import APIRouter, UploadFile, Depends, Body, HTTPException
 from src.infra.repository.file_repository import FileRepository
 from src.application.use_cases import UploadFileUseCase, ListFilesUseCase, GetFileUseCase, UpdateFileUseCase, DeleteFileUseCase, DownloadFileUseCase
 from src.application.dto.file import UploadFile as UploadFileParameter, UpdateFile as UpdateFileParameter
+from src.infra.clients.minio import MinioStorage, minio_client
 
 router = APIRouter()
 
@@ -12,8 +13,10 @@ router = APIRouter()
 async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
     content = await file.read()
     
-    file_repository = FileRepository(db)
-    use_case = UploadFileUseCase(file_repository)
+    minio = MinioStorage(minio_client)
+    repo = FileRepository(db, minio)
+    
+    use_case = UploadFileUseCase(repo)
     parameters = UploadFileParameter(filename=file.filename, content=content)
     
     response = await use_case.execute(parameters)
@@ -25,16 +28,18 @@ async def upload_file(file: UploadFile, db: Session = Depends(get_db)):
 
 @router.get("/files")
 async def list_files(db: Session = Depends(get_db)):
-    file_repository = FileRepository(db)
+    minio = MinioStorage(minio_client)
+    repo = FileRepository(db, minio)
     
-    use_case = ListFilesUseCase(file_repository)
+    use_case = ListFilesUseCase(repo)
     
     response = await use_case.execute()
     return {"success": True, "data": response}
 
 @router.get("/files/{file_id}")
 async def get_file(file_id: str, db: Session = Depends(get_db)):
-    repo = FileRepository(db)
+    minio = MinioStorage(minio_client)
+    repo = FileRepository(db, minio)
     
     use_case = GetFileUseCase(repo)
     
@@ -44,7 +49,8 @@ async def get_file(file_id: str, db: Session = Depends(get_db)):
 
 @router.put("/files/{file_id}")
 async def update_file(file_id, filename: str = Body(..., embed=True), db: Session = Depends(get_db)):
-    repo = FileRepository(db)
+    minio = MinioStorage(minio_client)
+    repo = FileRepository(db, minio)
     
     use_case = UpdateFileUseCase(repo)
     parameters = UpdateFileParameter(
@@ -57,7 +63,8 @@ async def update_file(file_id, filename: str = Body(..., embed=True), db: Sessio
 
 @router.delete("/files/{file_id}")
 async def delete_file(file_id: str, db: Session = Depends(get_db)):
-    repo = FileRepository(db)
+    minio = MinioStorage(minio_client)
+    repo = FileRepository(db, minio)
     
     use_case = DeleteFileUseCase(repo)
     response = await use_case.execute(file_id)
@@ -69,7 +76,8 @@ async def delete_file(file_id: str, db: Session = Depends(get_db)):
 
 @router.get("/files/{file_id}/download")
 async def download_file(file_id: str, db: Session = Depends(get_db)):
-    repo = FileRepository(db)
+    minio = MinioStorage(minio_client)
+    repo = FileRepository(db, minio)
     
     use_case = DownloadFileUseCase(repo)
     result = await use_case.execute(file_id)
